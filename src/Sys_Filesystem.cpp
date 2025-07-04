@@ -25,11 +25,12 @@ bool Sys_Filesystem::setupFilesystems() {
     // 初始化 LittleFS
     ESP_LOGI(TAG, "Initializing LittleFS...");
     // 使用 format on fail 的方式来初始化文件系统
-    if (!LittleFS.begin(false, "/littlefs", 10, "littlefs")) {
+    // 根据用户提供的my_8MB.csv，LittleFS分区标签为"spiffs"
+    if (!LittleFS.begin(false, "/spiffs", 10, "spiffs")) { // 挂载点改为/spiffs，分区标签为"spiffs"
         ESP_LOGE(TAG, "LittleFS Mount Failed! Attempting to format...");
         if (LittleFS.format()) { // 直接使用 LittleFS 对象
             ESP_LOGI(TAG, "LittleFS Formatted Successfully! Remounting...");
-            if (!LittleFS.begin(false, "/littlefs", 10, "littlefs")) {
+            if (!LittleFS.begin(false, "/spiffs", 10, "spiffs")) { // 挂载点改为/spiffs，分区标签为"spiffs"
                 ESP_LOGE(TAG, "LittleFS Remount Failed after format!");
                 success = false;
             } else {
@@ -46,11 +47,11 @@ bool Sys_Filesystem::setupFilesystems() {
     // 初始化 FFat
     ESP_LOGI(TAG, "Initializing FFat...");
     // FFat 同样使用 format on fail
-    if (!FFat.begin(false, "/ffat", 10, "ffat")) {
+    if (!FFat.begin(false, "/ffat", 10, "ffat")) { // 挂载点改为/ffat，分区标签为"ffat"
         ESP_LOGE(TAG, "FFat Mount Failed! Attempting to format...");
         if (FFat.format()) { // 直接使用 FFat 对象
             ESP_LOGI(TAG, "FFat Formatted Successfully! Remounting...");
-            if (!FFat.begin(false, "/ffat", 10, "ffat")) {
+            if (!FFat.begin(false, "/ffat", 10, "ffat")) { // 挂载点改为/ffat，分区标签为"ffat"
                 ESP_LOGE(TAG, "FFat Remount Failed after format!");
                 success = false;
             } else {
@@ -72,8 +73,9 @@ void Sys_Filesystem::testFilesystems() {
     ESP_LOGI(TAG, "--- Testing Filesystems ---");
 
     // LittleFS 测试
-    ESP_LOGI(TAG, "Testing LittleFS...");
-    if (LittleFS.begin(false, "/littlefs", 10, "littlefs")) {
+    ESP_LOGI(TAG, "--- Testing LittleFS ---");
+    if (LittleFS.begin(false, "/spiffs", 10, "spiffs")) { // 挂载点改为/spiffs，分区标签为"spiffs"
+        ESP_LOGI(TAG, "LittleFS Mounted for testing.");
         ESP_LOGI(TAG, "LittleFS Total Bytes: %u", LittleFS.totalBytes());
         ESP_LOGI(TAG, "LittleFS Used Bytes: %u", LittleFS.usedBytes());
         listDir(LittleFS, "/", 0); // 列出根目录文件
@@ -82,26 +84,29 @@ void Sys_Filesystem::testFilesystems() {
         if (file) {
             file.println("Hello from LittleFS!");
             file.close();
-            ESP_LOGI(TAG, "Wrote /test_littlefs.txt to LittleFS.");
+            ESP_LOGI(TAG, "Wrote /test_littlefs.txt to LittleFS successfully.");
         } else {
-            ESP_LOGE(TAG, "Failed to open /test_littlefs.txt for writing.");
+            ESP_LOGE(TAG, "Failed to open /test_littlefs.txt for writing to LittleFS.");
         }
         // 读取测试文件
         file = LittleFS.open("/test_littlefs.txt", "r");
         if (file) {
             String content = file.readString();
-            ESP_LOGI(TAG, "Read from /test_littlefs.txt: %s", content.c_str());
+            ESP_LOGI(TAG, "Read from /test_littlefs.txt (LittleFS): %s", content.c_str());
             file.close();
         } else {
-            ESP_LOGE(TAG, "Failed to open /test_littlefs.txt for reading.");
+            ESP_LOGE(TAG, "Failed to open /test_littlefs.txt for reading from LittleFS.");
         }
+        // LittleFS.end(); // 移除：测试完成后不卸载，文件系统应保持挂载状态
+        // ESP_LOGI(TAG, "LittleFS Unmounted after testing.");
     } else {
         ESP_LOGE(TAG, "LittleFS not mounted for testing.");
     }
 
     // FFat 测试
-    ESP_LOGI(TAG, "Testing FFat...");
-    if (FFat.begin(false, "/ffat", 10, "ffat")) {
+    ESP_LOGI(TAG, "--- Testing FFat ---");
+    if (FFat.begin(false, "/ffat", 10, "ffat")) { // 挂载点改为/ffat，分区标签为"ffat"
+        ESP_LOGI(TAG, "FFat Mounted for testing.");
         ESP_LOGI(TAG, "FFat Total Bytes: %u", FFat.totalBytes());
         ESP_LOGI(TAG, "FFat Used Bytes: %u", FFat.usedBytes());
         listDir(FFat, "/", 0); // 列出根目录文件
@@ -110,19 +115,21 @@ void Sys_Filesystem::testFilesystems() {
         if (file) {
             file.println("Hello from FFat!");
             file.close();
-            ESP_LOGI(TAG, "Wrote /test_ffat.txt to FFat.");
+            ESP_LOGI(TAG, "Wrote /test_ffat.txt to FFat successfully.");
         } else {
-            ESP_LOGE(TAG, "Failed to open /test_ffat.txt for writing.");
+            ESP_LOGE(TAG, "Failed to open /test_ffat.txt for writing to FFat.");
         }
         // 读取测试文件
         file = FFat.open("/test_ffat.txt", "r");
         if (file) {
             String content = file.readString();
-            ESP_LOGI(TAG, "Read from /test_ffat.txt: %s", content.c_str());
+            ESP_LOGI(TAG, "Read from /test_ffat.txt (FFat): %s", content.c_str());
             file.close();
         } else {
-            ESP_LOGE(TAG, "Failed to open /test_ffat.txt for reading.");
+            ESP_LOGE(TAG, "Failed to open /test_ffat.txt for reading from FFat.");
         }
+        // FFat.end(); // 移除：测试完成后不卸载，文件系统应保持挂载状态
+        // ESP_LOGI(TAG, "FFat Unmounted after testing.");
     } else {
         ESP_LOGE(TAG, "FFat not mounted for testing.");
     }
@@ -136,7 +143,7 @@ void Sys_Filesystem::testFilesystems() {
 bool Sys_Filesystem::formatFilesystem(fs::FS &fs, const char* partitionLabel) {
     ESP_LOGW(TAG, "Formatting filesystem on partition: %s. This will erase all data!", partitionLabel);
     // 根据 partitionLabel 判断要格式化哪个文件系统
-    if (strcmp(partitionLabel, "littlefs") == 0) {
+    if (strcmp(partitionLabel, "spiffs") == 0) { // 修改为"spiffs"
         if (LittleFS.format()) {
             ESP_LOGI(TAG, "LittleFS formatted successfully.");
             return true;
