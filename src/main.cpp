@@ -1,19 +1,26 @@
 #include <Arduino.h>
+#include <WiFi.h>              // 用于Wi-Fi连接
 #include "esp_spi_flash.h" // 用于获取 Flash 芯片信息
 #include "esp32/spiram.h"  // 用于获取 PSRAM 信息
 #include "esp_partition.h" // 用于遍历分区表
 #include "esp_idf_version.h" // 用于获取 ESP-IDF 版本
 #include "esp_heap_caps.h" // 用于获取不同内存类型堆信息
+#include "Sys_MemoryManager.h" // 引入内存管理器
+#include "Sys_Filesystem.h"    // 引入文件系统管理器
+#include "Sys_WebServer.h"     // 引入Web服务器管理器
 
 // 函数声明
 void printDiagnostics();
+void setupMemoryManager(); // 设置内存管理器
+void setupFilesystems();   // 设置文件系统
+void setupWiFiAndWebServer(); // 新增：设置Wi-Fi和Web服务器
 
 void setup() {
   // 1. 初始化串口，直接使用数值
   Serial.begin(115200);
 
   // 2. 延迟3秒，确保串口监视器有时间连接
-  delay(3000); 
+  delay(3000);
 
   // 3. 打印启动信息
   Serial.println(F("\n\nBooting up... Starting one-time hardware check."));
@@ -22,7 +29,16 @@ void setup() {
   // 4. 直接在 setup() 中调用诊断函数，这样它就只会执行一次
   printDiagnostics();
 
-  // 5. 打印结束信息
+  // 5. 设置内存管理器
+  setupMemoryManager();
+
+  // 6. 设置文件系统
+  setupFilesystems();
+
+  // 7. 设置Wi-Fi和Web服务器
+  setupWiFiAndWebServer();
+
+  // 8. 打印结束信息
   Serial.println(F("\n\n============================================="));
   Serial.println(F("Check finished. The system will now idle."));
   Serial.println(F("检查完成。系统现在将进入空闲状态。"));
@@ -60,7 +76,7 @@ void printDiagnostics() {
   Serial.print(F("ESP-IDF Version / 版本: "));
   Serial.println(esp_get_idf_version());
 
-  // --- 1. 验证 Flash 和 PSRAM ---
+  // --- 1. Flash and PSRAM Verification / 验证---
   Serial.println(F("\n--- 1. Flash and PSRAM Verification / 验证---"));
 
   // 获取 Flash 芯片大小 (来自芯片硬件)
@@ -70,7 +86,7 @@ void printDiagnostics() {
   Serial.println(F(" MB"));
 
   // 获取 PSRAM 芯片大小 (来自芯片硬件)
-  uint32_t psram_size_bytes = esp_spiram_get_size(); 
+  uint32_t psram_size_bytes = esp_spiram_get_size();
   if (psram_size_bytes > 0) {
     Serial.print(F("PSRAM Size / PSRAM大小 (由硬件检测): "));
     Serial.print(psram_size_bytes / (1024 * 1024));
@@ -157,4 +173,89 @@ void printDiagnostics() {
   esp_partition_iterator_release(it);
   
   Serial.println(F("\n-> 请将此表与您的分区表CSV文件进行比较，它们应该完全匹配！"));
+}
+
+/**
+ * @brief 设置内存管理器
+ */
+void setupMemoryManager() {
+    Serial.println(F("\n\n============================================="));
+    Serial.println(F(" Initializing Sys_MemoryManager"));
+    Serial.println(F(" 初始化 Sys_MemoryManager"));
+    Serial.println(F("============================================="));
+
+    Sys_MemoryManager* memManager = Sys_MemoryManager::getInstance();
+    // 根据设计文档，为摄像头模块数据流、识别相关处理预留内存
+    // 假设摄像头帧大小为 1MB，预分配 4 个块
+    memManager->initialize(1024 * 1024, 4); // 1MB per block, 4 blocks
+
+    // 简单测试内存分配和释放
+    Serial.println(F("\n--- Testing Sys_MemoryManager ---"));
+    void* block1 = memManager->getMemoryBlock(500 * 1024); // 请求 500KB
+    if (block1) {
+        Serial.println(F("Successfully got a 500KB block."));
+    }
+    void* block2 = memManager->getMemoryBlock(1024 * 1024); // 请求 1MB
+    if (block2) {
+        Serial.println(F("Successfully got a 1MB block."));
+    }
+    memManager->releaseMemoryBlock(block1);
+    Serial.println(F("Released 500KB block."));
+    memManager->printMemoryInfo(); // 打印当前内存池状态
+    Serial.println(F("---------------------------------"));
+}
+
+/**
+ * @brief 设置文件系统
+ */
+void setupFilesystems() {
+    Serial.println(F("\n\n============================================="));
+    Serial.println(F(" Initializing Sys_Filesystem"));
+    Serial.println(F(" 初始化 Sys_Filesystem"));
+    Serial.println(F("============================================="));
+
+    Sys_Filesystem* fsManager = Sys_Filesystem::getInstance();
+    if (fsManager->setupFilesystems()) {
+        Serial.println(F("Filesystems initialized successfully."));
+        fsManager->testFilesystems(); // 测试文件系统
+    } else {
+        Serial.println(F("Failed to initialize filesystems."));
+    }
+}
+
+/**
+ * @brief 设置Wi-Fi和Web服务器
+ */
+void setupWiFiAndWebServer() {
+    Serial.println(F("\n\n============================================="));
+    Serial.println(F(" Initializing WiFi and Web Server"));
+    Serial.println(F(" 初始化 Wi-Fi 和 Web 服务器"));
+    Serial.println(F("============================================="));
+
+    // 简单的Wi-Fi连接，后续会替换为更完善的Wi-Fi管理模块
+    const char* ssid = "zhang2";     // 请替换为您的Wi-Fi SSID
+    const char* password = "13557845431"; // 请替换为您的Wi-Fi密码
+
+    Serial.print(F("Connecting to WiFi: "));
+    Serial.println(ssid);
+    WiFi.begin(ssid, password);
+
+    int retries = 0;
+    while (WiFi.status() != WL_CONNECTED && retries < 20) {
+        delay(500);
+        Serial.print(".");
+        retries++;
+    }
+
+    if (WiFi.status() == WL_CONNECTED) {
+        Serial.println(F("\nWiFi connected."));
+        Serial.print(F("IP Address: "));
+        Serial.println(WiFi.localIP());
+
+        // 启动Web服务器
+        Sys_WebServer* webServer = Sys_WebServer::getInstance();
+        webServer->begin();
+    } else {
+        Serial.println(F("\nWiFi connection failed. Web server will not start."));
+    }
 }
