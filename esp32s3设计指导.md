@@ -40,7 +40,7 @@ release_frame_buffer（）：将块标记为  可用
 使用环形缓冲区 (Circular Buffer) 实现的移动平均，例如文件系统或OTA固件存储的优化。
 
 #### 自定义分区表：my_8MB.csv
-nvs=20k + otadata=8k + app0=2.5M + app1=2.5M + littlefs=932k + ffat=1984k + coredump=64k
+nvs=20k + otadata=8k + app0=2.5M + app1=2.5M + spiffs=932k + ffat=1984k + coredump=64k
 
 ##### nvs=20k  //存储Wi-Fi凭据、设备配置等小数据
 
@@ -48,7 +48,7 @@ nvs=20k + otadata=8k + app0=2.5M + app1=2.5M + littlefs=932k + ffat=1984k + core
 
 ##### app0=2.5M、app1=2.5M  //编译后的文件存储区
 
-##### littlefs=932k    //SPIFFS、用于存放 HTML, JS, CSS等UI资源
+##### spiffs=932k    //SPIFFS、用于存放 HTML, JS, CSS等UI资源
 
 ##### ffat=2M  //FAT、用于存放WAV, JSON 等大文件
 
@@ -208,10 +208,11 @@ Task_SystemMonitor (Core 1, 优先级低)：
 #### 在根项目结构为文件系统镜像建立独立的源文件夹：
 data<-- 默认的data目录，用于默认的LittleFS/SPIFFS
 media<-- 新增的media目录，用于 fatfs 的FAT分区
+注意！esp-IDF固定先从ffat分区写入！分区顺序要先 fatfs再到SPIFFS。
 
 ##### 初始化：
 建议使用 format on fail 的方式来初始化文件系统。首次启动时进行格式化，后续启动时不再强制格式化。
-例如：if (!LittleFS.begin(false, "/", 10, "littlefs"))
+例如：if (!LittleFS.begin(false, "/spiffs", 10, "spiffs"))
 
 ##### 挂载：
 建议使用 setupFilesystems() 函数挂载使用。
@@ -221,8 +222,8 @@ media<-- 新增的media目录，用于 fatfs 的FAT分区
 测试该功能时建议使用testFilesystems() 函数测试
 
 ##### web路由映射：
-LittleFS 挂载：server.serveStatic("/", LittleFS, "/"); // 在 LittleFS 根目录查找文件
-FFat 挂载：server.serveStatic("/media", FFat, "/");
+SPIFFS 挂载：server.serveStatic("/", LittleFS, "/"); // 在 LittleFS 根目录查找文件
+FFat 挂载：server.serveStatic("/media", ffat, "/");
 
 #### 实现 Web上传功能，允许用户通过浏览器将WAV/JSON文件上传到FATFS分区
 
