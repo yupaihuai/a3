@@ -1,10 +1,10 @@
 # ESP32S3 管理系统开发日志
 
-## 阶段0：项目骨架与核心服务搭建 (The Foundation) & 阶段1：Web服务器与前端资源流水线 (The Web Stack)
+## 阶段0-2：核心服务、Web与动态仪表盘
 
 ### 设计说明与开发进度
 
-本阶段主要目标是搭建ESP32S3管理系统的基础骨架，并实现Web服务器和前端资源流水线，确保硬件环境、内存管理、文件系统以及Web服务核心功能的正常运行。
+本阶段主要目标是搭建ESP32S3管理系统的基础骨架，实现Web服务器和前端资源流水线，并最终实现一个功能性的动态仪表盘，能够按需获取并展示准确的系统状态。
 
 **已完成工作：**
 
@@ -33,21 +33,31 @@
     *   创建了基础的 `data/index.html`、`data/style.css` 和 `data/script.js` 文件。
     *   通过浏览器访问ESP32的IP地址，验证了Web页面正常显示，并且前端的CSS样式和JavaScript交互（按钮点击）也正常工作。
 
+6.  **实时通信链路 (WebSocket)**
+    *   在 `Sys_WebServer` 中成功集成了 `AsyncWebSocket` 服务，并监听 `/ws` 路径。
+    *   实现了基础的后端WebSocket事件处理器 (`onWsEvent`)，用于处理客户端连接、断开和数据收发。
+    *   重构了 `data/script.js`，实现了完整的客户端WebSocket逻辑，包括动态连接、事件处理（`onopen`, `onmessage`, `onclose`）以及断线自动重连机制。
+    *   优化了 `Sys_WebServer.cpp` 的路由逻辑，移除了冗余代码，使其更加健壮。
+
+7.  **动态仪表盘 (按需请求)**
+    *   根据您的反馈，将数据更新模式从“周期性推送”重构为更高效的“按需请求”。
+    *   增强了 `Sys_MemoryManager` 模块，增加了接口以准确查询其内部管理的PSRAM内存池状态。
+    *   重构了 `Sys_Tasks` 模块，使其在收到前端 `get_system_status` 命令时，能够调用 `Sys_MemoryManager` 获取准确的内存数据，并返回包含详细信息的JSON。
+    *   更新了前端 `script.js`，使其能够正确解析新的JSON数据结构，并以更美观、清晰的格式展示运行时间、通用堆内存和PSRAM内存池的使用情况。
+    *   通过增加 `Cache-Control` HTTP头，解决了浏览器缓存问题。
+    *   通过完整的编译、烧录和硬件在环测试，最终验证了该功能的正确性。
+
 ### 后期开发计划与步骤
 
-根据设计文档，下一阶段将聚焦于实时通信与动态仪表盘的实现。
+根据设计文档，下一阶段可聚焦于WIFI管理模块或设备控制模块的开发。
 
-**阶段2：实时通信与动态仪表盘 (Real-time Dashboard)**
-*   **目标**：实现WebSocket通信，使仪表盘页面能实时、自动地更新系统数据，无需刷新页面。
+**阶段3：WIFI管理模块 (WIFI Management)**
+*   **目标**：实现一个完整的WIFI设置界面，允许用户扫描网络、切换模式（AP/STA/AP-STA）并保存配置。
 *   **主要任务**：
-    *   在 `Sys_WebServer` 中集成 WebSocket 功能。
-    *   设计清晰简单、统一的通信协议格式（JSON RPC 2.0 或事件驱动协议）。
-    *   实现心跳机制，确保WebSocket连接活跃。
-    *   引入 `ArduinoJson` 库处理JSON数据。
-    *   设计FreeRTOS任务：`Task_WebSocketPusher` (Core 1, 优先级中等)，负责阻塞等待来自多个源头的数据（如条码识别队列 `xBarcodeQueue`、系统状态队列 `xStateQueue`）并通过WebSocket发送。
-    *   设计FreeRTOS任务：`Task_SystemMonitor` (Core 1, 优先级低)，负责周期性收集系统状态并通过 `xStateQueue` 输出。
-    *   前端JS使用 `fetch API` 和 `WebSocket` 获取数据，只更新页面上需要改变的部分。
-    *   前端JS使用模板字符串动态生成HTML片段，并用 `element.innerHTML` 更新DOM。
+    *   创建 `Sys_WiFiManager` 模块，封装WIFI连接、扫描、模式切换逻辑。
+    *   创建 `Sys_SettingsManager` 模块，用于将WIFI配置等信息持久化存储到NVS。
+    *   设计并实现WIFI设置的前端UI，包括网络扫描的模态框、模式切换的单选按钮等。
+    *   实现前后端通信逻辑，用于加载和保存WIFI配置。
 
 ### 使用说明
 
@@ -65,3 +75,4 @@
 4.  **访问Web界面**：
     *   从串口监视器获取ESP32的IP地址（例如：`192.168.1.103`）。
     *   在浏览器中输入该IP地址，即可访问管理系统的前端页面。
+    *   点击“获取系统状态”按钮，可以验证仪表盘的实时数据更新功能。

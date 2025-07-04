@@ -11,11 +11,12 @@ class Sys_WebServer {
 private:
     static Sys_WebServer* _instance;
     AsyncWebServer* _server; // 使用指针，在构造函数中初始化
+    AsyncWebSocket* _ws;     // WebSocket服务器实例
 
     Sys_WebServer(); // 私有构造函数，实现单例模式
 
-    // 处理根路径请求
-    void handleRoot(AsyncWebServerRequest *request);
+    // WebSocket事件处理器
+    void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len);
     // 处理文件未找到
     void handleNotFound(AsyncWebServerRequest *request);
     // 处理Gzip压缩文件
@@ -30,6 +31,9 @@ public:
 
     // 停止Web服务器
     void end();
+
+    // 获取WebSocket实例
+    AsyncWebSocket* getWebSocket();
 };
 
 #endif // SYS_WEB_SERVER_H

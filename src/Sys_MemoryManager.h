@@ -37,6 +37,12 @@ public:
 
     // 打印内存使用情况
     void printMemoryInfo();
+
+    // 获取内存池总大小
+    size_t getTotalPoolSize() const;
+
+    // 获取内存池可用大小
+    size_t getFreePoolSize() const;
 };
 
 #endif // SYS_MEMORY_MANAGER_H

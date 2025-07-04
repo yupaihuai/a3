@@ -176,7 +176,7 @@ Task_Worker (Core 1, 优先级低)：
 
 ##### 优先级划分：
 Task_SystemMonitor (Core 1, 优先级低)：
-职责：周期性状态收集器，通过xStateQueue（事件驱动-系统状态队列）
+职责：按需采集状态收集器，通过xStateQueue（事件驱动-系统状态队列）
 特性：将周期性任务统一
 
 #### FreeRTOS  信号量 (Semaphores)

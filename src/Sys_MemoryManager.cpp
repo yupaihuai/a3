@@ -107,3 +107,25 @@ void Sys_MemoryManager::printMemoryInfo() {
     ESP_LOGI(TAG, "Total PSRAM (overall system): %u bytes", heap_caps_get_total_size(MALLOC_CAP_SPIRAM));
     ESP_LOGI(TAG, "-----------------------------------------");
 }
+
+// 获取内存池总大小
+size_t Sys_MemoryManager::getTotalPoolSize() const {
+    size_t totalSize = 0;
+    for (int i = 0; i < MAX_MEMORY_BLOCKS; ++i) {
+        if (_memoryPool[i].ptr != nullptr) {
+            totalSize += _memoryPool[i].size;
+        }
+    }
+    return totalSize;
+}
+
+// 获取内存池可用大小
+size_t Sys_MemoryManager::getFreePoolSize() const {
+    size_t freeSize = 0;
+    for (int i = 0; i < MAX_MEMORY_BLOCKS; ++i) {
+        if (_memoryPool[i].ptr != nullptr && !_memoryPool[i].inUse) {
+            freeSize += _memoryPool[i].size;
+        }
+    }
+    return freeSize;
+}
