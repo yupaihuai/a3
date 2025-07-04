@@ -1,0 +1,14 @@
+# PlatformIO
+.pio/
+.vscode/
+
+# Common files
+*.o
+*.a
+*.so
+*.lib
+*.pyc
+
+# System files
+.DS_Store
+Thumbs.db
