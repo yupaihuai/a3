@@ -1,5 +1,4 @@
 #include <Arduino.h>
-#include <WiFi.h>              // 用于Wi-Fi连接
 #include "esp_spi_flash.h" // 用于获取 Flash 芯片信息
 #include "esp32/spiram.h"  // 用于获取 PSRAM 信息
 #include "esp_partition.h" // 用于遍历分区表
@@ -7,7 +6,9 @@
 #include "esp_heap_caps.h" // 用于获取不同内存类型堆信息
 #include "Sys_MemoryManager.h" // 引入内存管理器
 #include "Sys_Filesystem.h"    // 引入文件系统管理器
+#include "Sys_WiFiManager.h"   // 引入WiFi管理器
 #include "Sys_WebServer.h"     // 引入Web服务器管理器
+#include "Sys_Tasks.h"         // 引入任务管理器
 
 // 函数声明
 void printDiagnostics();
@@ -232,30 +233,25 @@ void setupWiFiAndWebServer() {
     Serial.println(F(" 初始化 Wi-Fi 和 Web 服务器"));
     Serial.println(F("============================================="));
 
-    // 简单的Wi-Fi连接，后续会替换为更完善的Wi-Fi管理模块
-    const char* ssid = "zhang2";     // 请替换为您的Wi-Fi SSID
-    const char* password = "13557845431"; // 请替换为您的Wi-Fi密码
+    // 获取WiFi管理器实例并初始化
+    // begin()方法内部会从NVS加载配置并尝试连接
+    Sys_WiFiManager* wifiManager = Sys_WiFiManager::getInstance();
+    wifiManager->begin();
 
-    Serial.print(F("Connecting to WiFi: "));
-    Serial.println(ssid);
-    WiFi.begin(ssid, password);
-
-    int retries = 0;
-    while (WiFi.status() != WL_CONNECTED && retries < 20) {
-        delay(500);
-        Serial.print(".");
-        retries++;
-    }
-
-    if (WiFi.status() == WL_CONNECTED) {
-        Serial.println(F("\nWiFi connected."));
+    // 只有在WiFi连接成功（或作为AP启动）后才启动Web服务器
+    if (wifiManager->isConnected() || WiFi.getMode() == WIFI_AP || WiFi.getMode() == WIFI_AP_STA) {
+        Serial.println(F("\nWiFi is active."));
         Serial.print(F("IP Address: "));
-        Serial.println(WiFi.localIP());
+        Serial.println(wifiManager->getIPAddress());
 
         // 启动Web服务器
         Sys_WebServer* webServer = Sys_WebServer::getInstance();
         webServer->begin();
+
+        // 启动后台任务
+        setupTasks(webServer->getWebSocket());
+
     } else {
-        Serial.println(F("\nWiFi connection failed. Web server will not start."));
+        Serial.println(F("\nWiFi is not connected. Web server will not start."));
     }
 }

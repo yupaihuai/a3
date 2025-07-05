@@ -1,8 +1,9 @@
+// Forcing recompile
 #include "Sys_WebServer.h"
-#include "Sys_Tasks.h" // 包含任务处理模块
-#include <ArduinoJson.h> // 包含JSON库
-#include <esp_log.h>   // For ESP_LOGx macros
-#include <WiFi.h>      // For WiFi.localIP()
+#include "Sys_Tasks.h"         // 包含任务处理模块
+#include <ArduinoJson.h>       // 包含JSON库
+#include <esp_log.h>           // For ESP_LOGx macros
+#include <WiFi.h>              // For WiFi.localIP()
 
 static const char* TAG = "Sys_WebServer";
 
@@ -79,12 +80,30 @@ void Sys_WebServer::onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *clie
                 }
 
                 const char* command = doc["command"];
+                CommandMessage cmd;
+                bool command_valid = true;
+
                 if (strcmp(command, "get_system_status") == 0) {
-                    // 调用任务处理器来处理命令
-                    handleSystemStatusCommand(client, server);
-                } else {
+                    cmd.command = CMD_GET_SYSTEM_STATUS;
+                } else if (strcmp(command, "scan_wifi_networks") == 0) {
+                    cmd.command = CMD_SCAN_WIFI;
+                }
+                // TODO: Implement save_wifi_settings logic by passing data via queue
+                /* else if (strcmp(command, "save_wifi_settings") == 0) {
+                    cmd.command = CMD_SAVE_WIFI_CONFIG;
+                    // This part needs a more complex payload system in the queue
+                } */
+                else {
+                    command_valid = false;
                     ESP_LOGW(TAG, "Unknown command received: %s", command);
                     client->text("{\"error\":\"Unknown command\"}");
+                }
+
+                if(command_valid) {
+                    if (xQueueSend(xCommandQueue, &cmd, pdMS_TO_TICKS(100)) != pdPASS) {
+                        ESP_LOGE(TAG, "Failed to post command to queue.");
+                        client->text("{\"error\":\"Server busy, please try again.\"}");
+                    }
                 }
             }
             break;
@@ -142,4 +161,8 @@ void Sys_WebServer::end() {
         _server->end();
         ESP_LOGI(TAG, "Web Server stopped.");
     }
+}
+
+AsyncWebSocket* Sys_WebServer::getWebSocket() {
+    return _ws;
 }

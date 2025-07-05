@@ -1,6 +1,5 @@
 body {
     font-family: Arial, sans-serif;
-    margin: 20px;
     background-color: #f4f4f4;
     color: #333;
 }
@@ -9,15 +8,54 @@ h1 {
     color: #0056b3;
 }
 
-button {
-    background-color: #007bff;
-    color: white;
-    padding: 10px 15px;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
+/* --- Bootstrap Sidebar Styles --- */
+
+.sidebar {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 100; /* Behind the navbar */
+  padding: 48px 0 0; /* Height of navbar */
+  box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
 }
 
-button:hover {
-    background-color: #0056b3;
+@media (max-width: 767.98px) {
+  .sidebar {
+    top: 56px; /* Adjust for navbar height */
+  }
+}
+
+.sidebar-sticky {
+  position: relative;
+  top: 0;
+  height: calc(100vh - 48px);
+  padding-top: .5rem;
+  overflow-x: hidden;
+  overflow-y: auto; /* Scrollable contents if viewport is shorter than content. */
+}
+
+.sidebar .nav-link {
+  font-weight: 500;
+  color: #333;
+}
+
+.sidebar .nav-link.active {
+  color: #0d6efd;
+  background-color: transparent !important; /* 覆盖Bootstrap的默认蓝色背景 */
+}
+
+.navbar-brand {
+  padding-top: .75rem;
+  padding-bottom: .75rem;
+  font-size: 1rem;
+}
+
+.navbar {
+  z-index: 1071; /* 确保Navbar在最顶层 */
+}
+
+.navbar .navbar-toggler {
+  top: .25rem;
+  right: 1rem;
 }
