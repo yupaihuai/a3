@@ -37,6 +37,9 @@ public:
     // 从NVS加载WiFi设置
     WiFiSettings loadWiFiSettings();
 
+    // 检查WiFi是否已配置 (即，SSID是否已保存)
+    bool isWiFiConfigured();
+
     // （未来扩展）保存其他设置...
     // bool saveMqttSettings(const MqttSettings& settings);
 };

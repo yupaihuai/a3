@@ -9,6 +9,7 @@
 #include "Sys_WiFiManager.h"   // 引入WiFi管理器
 #include "Sys_WebServer.h"     // 引入Web服务器管理器
 #include "Sys_Tasks.h"         // 引入任务管理器
+#include "Sys_SettingsManager.h" // 引入设置管理器
 
 // 函数声明
 void printDiagnostics();
@@ -20,17 +21,19 @@ void setup() {
   // 1. 初始化串口，直接使用数值
   Serial.begin(115200);
 
-  // 2. 延迟3秒，确保串口监视器有时间连接
-  delay(3000);
+  // 2. 打印启动信息
+  Serial.println(F("\n\n[FAST BOOT] System starting..."));
+  Serial.println(F("[快速启动] 系统启动..."));
 
-  // 3. 打印启动信息
-  Serial.println(F("\n\nBooting up... Starting one-time hardware check."));
-  Serial.println(F("系统启动... 开始一次性硬件检查。"));
+  // ----------------------------------------------------------------
+  //  开发调试信息 (默认禁用以加速启动)
+  //  在需要详细硬件信息时，请取消以下两行代码的注释
+  // ----------------------------------------------------------------
+  // delay(3000); // 确保串口监视器有时间连接
+  // printDiagnostics(); // 打印详细的硬件和配置检查信息
+  // ----------------------------------------------------------------
 
-  // 4. 直接在 setup() 中调用诊断函数，这样它就只会执行一次
-  printDiagnostics();
-
-  // 5. 设置内存管理器
+  // 3. 设置内存管理器
   setupMemoryManager();
 
   // 6. 设置文件系统
@@ -233,25 +236,28 @@ void setupWiFiAndWebServer() {
     Serial.println(F(" 初始化 Wi-Fi 和 Web 服务器"));
     Serial.println(F("============================================="));
 
-    // 获取WiFi管理器实例并初始化
-    // begin()方法内部会从NVS加载配置并尝试连接
+    Sys_SettingsManager* settingsManager = Sys_SettingsManager::getInstance();
     Sys_WiFiManager* wifiManager = Sys_WiFiManager::getInstance();
-    wifiManager->begin();
 
-    // 只有在WiFi连接成功（或作为AP启动）后才启动Web服务器
-    if (wifiManager->isConnected() || WiFi.getMode() == WIFI_AP || WiFi.getMode() == WIFI_AP_STA) {
-        Serial.println(F("\nWiFi is active."));
-        Serial.print(F("IP Address: "));
-        Serial.println(wifiManager->getIPAddress());
-
-        // 启动Web服务器
-        Sys_WebServer* webServer = Sys_WebServer::getInstance();
-        webServer->begin();
-
-        // 启动后台任务
-        setupTasks(webServer->getWebSocket());
-
+    if (settingsManager->isWiFiConfigured()) {
+        // 如果已配置，则尝试连接（非阻塞）
+        Serial.println(F("WiFi is configured. Attempting non-blocking connect..."));
+        wifiManager->begin();
     } else {
-        Serial.println(F("\nWiFi is not connected. Web server will not start."));
+        // 如果未配置，则启动配网模式
+        Serial.println(F("WiFi is not configured. Starting provisioning mode..."));
+        wifiManager->startProvisioningMode();
     }
+
+    // 无论在哪种模式下，都启动Web服务器以提供UI
+    // 后续可以通过isConnected()等方法在UI上显示具体状态
+    Serial.println(F("\nStarting Web Server..."));
+    Sys_WebServer* webServer = Sys_WebServer::getInstance();
+    webServer->begin();
+
+    // 启动后台任务
+    setupTasks(webServer->getWebSocket());
+    
+    // IP地址的获取和显示应该在一个后台任务中进行，因为连接是非阻塞的
+    Serial.println(F("Web server started. IP address will be available once connected."));
 }

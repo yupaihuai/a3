@@ -46,14 +46,25 @@ WiFiSettings Sys_SettingsManager::loadWiFiSettings() {
     ESP_LOGI(TAG, "Loading WiFi settings from NVS...");
     
     // getString的第二个参数是当键不存在时的默认值
-    settings.ssid = _preferences.getString("ssid", "zhang2");
-    settings.password = _preferences.getString("password", "13557845431");
+    // 当键不存在时，返回一个空字符串 ""
+    settings.ssid = _preferences.getString("ssid", "");
+    settings.password = _preferences.getString("password", "");
     settings.mode = _preferences.getInt("mode", 3); // 默认为 AP+STA 模式
     settings.staticIP = _preferences.getBool("static_ip", false);
-    settings.ip = _preferences.getString("ip", "192.168.4.1");
-    settings.subnet = _preferences.getString("subnet", "255.255.255.0");
-    settings.gateway = _preferences.getString("gateway", "192.168.4.1");
+    settings.ip = _preferences.getString("ip", "");
+    settings.subnet = _preferences.getString("subnet", "");
+    settings.gateway = _preferences.getString("gateway", "");
 
-    ESP_LOGI(TAG, "Loaded WiFi settings. SSID: '%s'", settings.ssid.c_str());
+    if (settings.ssid.length() > 0) {
+        ESP_LOGI(TAG, "Loaded WiFi settings. SSID: '%s'", settings.ssid.c_str());
+    } else {
+        ESP_LOGW(TAG, "No WiFi settings found in NVS.");
+    }
     return settings;
+}
+
+// 检查WiFi是否已配置
+bool Sys_SettingsManager::isWiFiConfigured() {
+    // 逻辑很简单：如果NVS中存在一个非空的SSID，就认为已经配置过了
+    return _preferences.getString("ssid", "").length() > 0;
 }

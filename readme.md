@@ -1,78 +1,63 @@
-# ESP32S3 管理系统开发日志
+# ESP32S3 管理系统开发蓝图
 
-## 阶段0-2：核心服务、Web与动态仪表盘
+## 1. 项目状态评估 (截至当前)
 
-### 设计说明与开发进度
+**核心结论：项目基础稳固，但功能实现与设计蓝图存在显著差距。**
 
-本阶段主要目标是搭建ESP32S3管理系统的基础骨架，实现Web服务器和前端资源流水线，并最终实现一个功能性的动态仪表盘，能够按需获取并展示准确的系统状态。
+经过全面的代码审查和硬件在环测试 (HIL)，项目已成功在 `esp32s3r8n8` 硬件上运行。测试确认了核心硬件配置（双核、8MB PSRAM、8MB Flash）、自定义分区表、文件系统以及基础Web服务器的正确性。
 
-**已完成工作：**
+然而，当前版本仅完成了“阶段0/1”的骨架搭建，与 `esp32s3设计指导.md` 中定义的宏伟目标相比，仍处于早期原型阶段。
 
-1.  **硬件与环境验证**
-    *   确认ESP32-S3单片机 (esp32s3r8n8)双核、8MB Octal PSRAM、8MB Quad Flash硬件配置正常。
-    *   验证PlatformIO环境配置为espressif32 v6.11.0，内置Arduino Core v3.2.0以上版本。
-    *   自定义板型 `esp32s3_lckfb_N8R8` (继承 `esp32-s3-devkitc-1`) 和自定义分区表 `my_8MB.csv` 已验证正常工作。
-    *   通过 `main.cpp` 中的诊断函数，验证了CPU信息、Flash/PSRAM大小及模式、堆内存分配情况，以及分区表与 `my_8MB.csv` 的一致性。
+### 1.1. 已完成的工作
 
-2.  **内存管理模块 (`Sys_MemoryManager`)**
-    *   实现了 `Sys_MemoryManager` 单例类，用于高效管理PSRAM大块内存。
-    *   在 `setup()` 函数中初始化了内存管理器，并预分配了4个1MB的PSRAM内存块，通过简单的分配和释放测试验证了其功能。
+*   **硬件与环境验证**: 成功验证了 PlatformIO 环境、自定义板级配置和分区方案。
+*   **核心模块占位**: 创建了 `Sys_MemoryManager`, `Sys_Filesystem`, `Sys_WebServer` 等核心模块的单例类骨架。
+*   **基础Web服务**: 启动了 `ESPAsyncWebServer`，能够提供静态 HTML/CSS/JS 文件，并建立了基础的 WebSocket 通信链路。
+*   **按需数据获取**: 实现了从前端请求、后端响应并更新系统状态（内存、运行时间）的基础动态功能。
 
-3.  **文件系统模块 (`Sys_Filesystem`)**
-    *   实现了 `Sys_Filesystem` 单例类，用于统一管理LittleFS和FFat文件系统。
-    *   解决了文件系统挂载点问题，LittleFS挂载到 `/spiffs`，FFat挂载到 `/ffat`。
-    *   配置 `platformio.ini` 强制在上传时格式化文件系统分区，确保文件系统干净。
-    *   验证了文件系统的初始化和挂载成功。
+### 1.2. 待解决的关键差距 (Gap Analysis)
 
-4.  **Web服务器模块 (`Sys_WebServer`)**
-    *   实现了 `Sys_WebServer` 单例类，封装了 `ESPAsyncWebServer` 的初始化与事件处理。
-    *   在 `setup()` 函数中集成了Wi-Fi连接逻辑，并成功连接到用户提供的Wi-Fi网络（IP地址：192.168.1.103）。
-    *   Web服务器成功启动，并能够提供静态前端资源。
+1.  **【最高优先级】网络配置硬编码**:
+    *   **问题**: WiFi 的 SSID 和密码目前硬编码在 `src/main.cpp` 中。这是当前项目最大的短板，完全不符合设计文档中关于“SOFTAP配网”的要求，导致设备无法脱离开发环境进行部署。
+    *   **解决方案**: 立即着手开发 **WIFI管理模块** 和 **设置持久化模块**。
 
-5.  **前端资源**
-    *   创建了基础的 `data/index.html`、`data/style.css` 和 `data/script.js` 文件。
-    *   通过浏览器访问ESP32的IP地址，验证了Web页面正常显示，并且前端的CSS样式和JavaScript交互（按钮点击）也正常工作。
+2.  **【架构差距】缺乏多任务架构**:
+    *   **问题**: 系统目前运行在 Arduino 的 `setup()` 和 `loop()` 单任务模式下。设计文档中规划的、用于确保系统响应性和稳定性的 FreeRTOS 多任务架构（如 `Task_WebServer`, `Task_Worker`）尚未实现。
+    *   **解决方案**: 在开发后续功能（如WIFI设置保存）时，必须同步引入 FreeRTOS 队列和任务，将耗时操作从主Web任务中分离。
 
-6.  **实时通信链路 (WebSocket)**
-    *   在 `Sys_WebServer` 中成功集成了 `AsyncWebSocket` 服务，并监听 `/ws` 路径。
-    *   实现了基础的后端WebSocket事件处理器 (`onWsEvent`)，用于处理客户端连接、断开和数据收发。
-    *   重构了 `data/script.js`，实现了完整的客户端WebSocket逻辑，包括动态连接、事件处理（`onopen`, `onmessage`, `onclose`）以及断线自动重连机制。
-    *   优化了 `Sys_WebServer.cpp` 的路由逻辑，移除了冗余代码，使其更加健壮。
+3.  **【UI/UX差距】前端界面简陋**:
+    *   **问题**: 当前的 Web 页面仅为功能验证的占位符，与设计文档中规划的、基于 Bootstrap 的响应式、多模块仪表盘相去甚远。
+    *   **解决方案**: 在下一阶段的开发中，严格按照 UI/UX 设计总则重构整个前端。
 
-7.  **动态仪表盘 (按需请求)**
-    *   根据您的反馈，将数据更新模式从“周期性推送”重构为更高效的“按需请求”。
-    *   增强了 `Sys_MemoryManager` 模块，增加了接口以准确查询其内部管理的PSRAM内存池状态。
-    *   重构了 `Sys_Tasks` 模块，使其在收到前端 `get_system_status` 命令时，能够调用 `Sys_MemoryManager` 获取准确的内存数据，并返回包含详细信息的JSON。
-    *   更新了前端 `script.js`，使其能够正确解析新的JSON数据结构，并以更美观、清晰的格式展示运行时间、通用堆内存和PSRAM内存池的使用情况。
-    *   通过增加 `Cache-Control` HTTP头，解决了浏览器缓存问题。
-    *   通过完整的编译、烧录和硬件在环测试，最终验证了该功能的正确性。
+## 2. 下一阶段开发计划：完善Web服务模块
 
-### 后期开发计划与步骤
+根据您的指示，我们正式进入 **阶段2：Web服务模块** 的开发。此阶段的核心目标是解决上述差距，首先从最关键的网络配置入手。
 
-根据设计文档，下一阶段可聚焦于WIFI管理模块或设备控制模块的开发。
+### 2.1. 任务一：实现WIFI管理与持久化
 
-**阶段3：WIFI管理模块 (WIFI Management)**
-*   **目标**：实现一个完整的WIFI设置界面，允许用户扫描网络、切换模式（AP/STA/AP-STA）并保存配置。
-*   **主要任务**：
-    *   创建 `Sys_WiFiManager` 模块，封装WIFI连接、扫描、模式切换逻辑。
-    *   创建 `Sys_SettingsManager` 模块，用于将WIFI配置等信息持久化存储到NVS。
-    *   设计并实现WIFI设置的前端UI，包括网络扫描的模态框、模式切换的单选按钮等。
-    *   实现前后端通信逻辑，用于加载和保存WIFI配置。
+*   **目标**: 让用户可以通过 Web 界面配置设备的 Wi-Fi 连接，并永久保存设置。
+*   **后端任务**:
+    1.  **完善 `Sys_WiFiManager`**: 封装 Wi-Fi 扫描、模式切换 (AP/STA/AP-STA)、连接等核心逻辑。
+    2.  **完善 `Sys_SettingsManager`**: 封装使用 `Preferences` 库对 NVS（非易失性存储）的读写操作，用于持久化保存 Wi-Fi 配置。
+    3.  **剥离 `main.cpp`**: 将 Wi-Fi 连接逻辑从 `main.cpp` 中移除，改为在启动时从 NVS 加载配置。如果无配置，则启动配网模式。
+    4.  **实现 WebSocket API**: 创建处理前端请求的 WebSocket 命令，如 `get_wifi_settings`, `save_wifi_settings`, `scan_wifi_networks`。
+*   **前端任务**:
+    1.  **创建“设备控制”页面**: 根据设计文档，建立包含“WIFI设置”Tab的页面。
+    2.  **实现WIFI设置表单**: 设计 UI，包含模式切换、SSID/密码输入框、保存按钮等。
+    3.  **实现网络扫描模态框**: 点击“扫描”按钮后，弹出模态框，以列表形式显示扫描到的网络，点击后可自动填充SSID。
+    4.  **实现前后端交互**: 编写 JavaScript，通过 WebSocket 发送命令、接收数据并动态更新UI。
 
-### 使用说明
+## 3. 使用说明
 
-1.  **环境准备**：
-    *   确保已安装VS Code和PlatformIO扩展。
-    *   PlatformIO配置环境为 `espressif32@~6.11.0`，内置Arduino Core v3.2.0以上版本。
-    *   确保开发板 `esp32s3_lckfb_N8R8` 已正确连接到COM端口（上传端口COM3，监视端口COM4）。
-2.  **Wi-Fi配置**：
-    *   打开 `src/main.cpp` 文件。
-    *   在 `setupWiFiAndWebServer()` 函数中，将 `const char* ssid` 和 `const char* password` 替换为您的实际Wi-Fi网络名称和密码。
-3.  **编译与上传**：
-    *   在VS Code中，点击PlatformIO侧边栏的“Build”按钮（或运行 `platformio run` 命令）编译项目。
-    *   点击“Upload”按钮（或运行 `platformio run -t upload` 命令）将固件上传到ESP32。
-    *   点击“Monitor”按钮（或运行 `platformio run -t monitor` 命令）打开串口监视器，查看启动日志和IP地址。
-4.  **访问Web界面**：
-    *   从串口监视器获取ESP32的IP地址（例如：`192.168.1.103`）。
-    *   在浏览器中输入该IP地址，即可访问管理系统的前端页面。
-    *   点击“获取系统状态”按钮，可以验证仪表盘的实时数据更新功能。
+1.  **环境准备**:
+    *   确保已安装 VS Code 和 PlatformIO 扩展。
+    *   PlatformIO 环境为 `espressif32@~6.11.0`。
+    *   **检查端口配置**: 打开 `platformio.ini` 文件，确认 `upload_port` 和 `monitor_port` 与您的硬件连接匹配。
+2.  **Wi-Fi配置 (当前版本)**:
+    *   **注意**: 当前版本使用硬编码的 Wi-Fi 凭据。
+    *   打开 `src/main.cpp` 文件，在 `setupWiFiAndWebServer()` 函数中修改 `ssid` 和 `password`。
+3.  **编译与上传**:
+    *   使用 PlatformIO 的 "Build", "Upload", "Upload Filesystem" 和 "Monitor" 功能。
+    *   **完整命令**: `platformio run -t clean -t uploadfs -t upload -t monitor`
+4.  **访问Web界面**:
+    *   从串口监视器获取 IP 地址，然后在浏览器中访问。

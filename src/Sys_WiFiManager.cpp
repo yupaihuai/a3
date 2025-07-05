@@ -24,6 +24,12 @@ void Sys_WiFiManager::begin() {
     ESP_LOGI(TAG, "Initializing WiFi Manager...");
     _currentSettings = Sys_SettingsManager::getInstance()->loadWiFiSettings();
 
+    // 如果没有有效的SSID配置，则不执行任何操作
+    if (_currentSettings.ssid.length() == 0) {
+        ESP_LOGW(TAG, "No WiFi configuration found. Aborting WiFi.begin().");
+        return;
+    }
+
     // 根据加载的模式设置WiFi
     WiFi.mode((wifi_mode_t)_currentSettings.mode);
 
@@ -51,25 +57,23 @@ void Sys_WiFiManager::begin() {
             WiFi.begin(_currentSettings.ssid.c_str(), _currentSettings.password.c_str());
 
             // 等待连接，这里可以添加超时逻辑
-            int retries = 0;
-            while (WiFi.status() != WL_CONNECTED && retries < 20) {
-                delay(500);
-                Serial.print(".");
-                retries++;
-            }
-
-            if(WiFi.status() == WL_CONNECTED) {
-                ESP_LOGI(TAG, "STA Mode Connected. IP Address: %s", WiFi.localIP().toString().c_str());
-            } else {
-                ESP_LOGW(TAG, "STA Mode connection failed. Continuing with AP mode if enabled.");
-                // 如果STA连接失败，在AP+STA模式下，AP仍然是可用的。
-                // 我们不需要做任何事，只需确保 getIPAddress() 能返回正确的IP。
-            }
+            // 非阻塞连接：只调用begin，不在此处等待。
+            // 连接状态的检查应该由一个独立的任务或主循环来处理。
+            ESP_LOGI(TAG, "Non-blocking connection attempt initiated.");
 
         } else {
             ESP_LOGW(TAG, "No SSID configured for STA mode, skipping STA connection.");
         }
     }
+}
+
+// 启动配网模式
+void Sys_WiFiManager::startProvisioningMode() {
+    const char* ap_ssid = "ESP32S3-Config";
+    ESP_LOGI(TAG, "Starting Provisioning Mode AP with SSID: %s", ap_ssid);
+    WiFi.mode(WIFI_AP);
+    WiFi.softAP(ap_ssid, NULL); // 启动一个开放的配置网络
+    ESP_LOGI(TAG, "Provisioning AP IP address: %s", WiFi.softAPIP().toString().c_str());
 }
 
 // 扫描可用WiFi网络

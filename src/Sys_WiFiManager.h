@@ -24,6 +24,9 @@ public:
     // 初始化WiFi管理器，加载配置并连接
     void begin();
 
+    // 启动配网模式 (强制开启一个AP)
+    void startProvisioningMode();
+
     // 扫描可用WiFi网络
     // 返回扫描到的网络数量，扫描结果通过WiFi.SSID(i)等获取
     int scanNetworks();
