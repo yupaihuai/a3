@@ -12,19 +12,22 @@ class AsyncWebSocket;
 typedef enum {
     CMD_GET_SYSTEM_STATUS,
     CMD_SCAN_WIFI,
+    CMD_GET_WIFI_SETTINGS,
+    CMD_SAVE_WIFI_SETTINGS,
     // 未来可以添加更多命令
-    // CMD_SAVE_WIFI_CONFIG,
 } AppCommand;
 
 // 定义在命令队列中传递的消息结构
+#define MAX_PAYLOAD_SIZE 256 // 假设JSON payload的最大长度
 struct CommandMessage {
     AppCommand command;
-    // 可以添加一个void*指针来传递额外的数据，但为了简单起见，暂时省略
-    // void* payload;
+    char payload[MAX_PAYLOAD_SIZE]; // 用于传递JSON字符串数据
 };
 
 // 外部可以访问的命令队列句柄
 extern QueueHandle_t xCommandQueue;
+extern QueueHandle_t xStateQueue; // 系统状态队列
+extern QueueHandle_t xBarcodeQueue; // 条码识别队列
 
 /**
  * @brief 初始化并创建所有系统级FreeRTOS任务。
@@ -32,6 +35,20 @@ extern QueueHandle_t xCommandQueue;
  * @param wsInstance 指向AsyncWebSocket实例的指针，用于任务回调。
  */
 void setupTasks(AsyncWebSocket* wsInstance);
+
+/**
+ * @brief WebSocket数据推送任务。
+ * 负责从多个数据队列接收数据，并通过WebSocket发送到前端。
+ * @param pvParameters 任务参数 (未使用)。
+ */
+void taskWebSocketPusher(void *pvParameters);
+
+/**
+ * @brief 系统状态监控任务。
+ * 负责周期性采集系统状态，并通过队列发送给WebSocket推送任务。
+ * @param pvParameters 任务参数 (未使用)。
+ */
+void taskSystemMonitor(void *pvParameters);
 
 /**
  * @brief 通用的工人任务（Worker Task）。

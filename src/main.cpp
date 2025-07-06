@@ -239,12 +239,15 @@ void setupWiFiAndWebServer() {
     Sys_SettingsManager* settingsManager = Sys_SettingsManager::getInstance();
     Sys_WiFiManager* wifiManager = Sys_WiFiManager::getInstance();
 
-    if (settingsManager->isWiFiConfigured()) {
-        // 如果已配置，则尝试连接（非阻塞）
+    // 总是尝试加载并应用WiFi设置
+    WiFiSettings storedSettings = settingsManager->loadWiFiSettings();
+
+    if (storedSettings.ssid.length() > 0) {
+        // 如果NVS中有保存的SSID，则尝试连接
         Serial.println(F("WiFi is configured. Attempting non-blocking connect..."));
-        wifiManager->begin();
+        wifiManager->begin(); // 使用加载的设置进行连接
     } else {
-        // 如果未配置，则启动配网模式
+        // 如果NVS中没有SSID，则启动配网模式
         Serial.println(F("WiFi is not configured. Starting provisioning mode..."));
         wifiManager->startProvisioningMode();
     }

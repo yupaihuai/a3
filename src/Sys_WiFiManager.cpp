@@ -36,8 +36,9 @@ void Sys_WiFiManager::begin() {
     if (_currentSettings.mode == WIFI_AP || _currentSettings.mode == WIFI_AP_STA) {
         // 为AP模式使用一个固定的、有意义的SSID，而不是用户配置的STA SSID
         const char* ap_ssid = "ESP32S3-Config";
+        const char* ap_password = "12345678"; // 默认密码，可从NVS加载或在配网模式下设置
         ESP_LOGI(TAG, "Starting Access Point with fixed SSID: %s", ap_ssid);
-        WiFi.softAP(ap_ssid, NULL); // 启动一个开放的配置网络
+        WiFi.softAP(ap_ssid, ap_password); // 启动一个带密码的配置网络
         ESP_LOGI(TAG, "AP IP address: %s", WiFi.softAPIP().toString().c_str());
     }
 
@@ -56,11 +57,19 @@ void Sys_WiFiManager::begin() {
 
             WiFi.begin(_currentSettings.ssid.c_str(), _currentSettings.password.c_str());
 
-            // 等待连接，这里可以添加超时逻辑
-            // 非阻塞连接：只调用begin，不在此处等待。
-            // 连接状态的检查应该由一个独立的任务或主循环来处理。
-            ESP_LOGI(TAG, "Non-blocking connection attempt initiated.");
+            // 阻塞等待连接，直到连接成功或超时
+            int attempts = 0;
+            const int MAX_ATTEMPTS = 30; // 最多等待30秒
+            while (WiFi.status() != WL_CONNECTED && attempts < MAX_ATTEMPTS) {
+                delay(1000); // 等待1秒
+                ESP_LOGD(TAG, "Waiting for WiFi connection... (%d/%d)", ++attempts, MAX_ATTEMPTS);
+            }
 
+            if (WiFi.status() == WL_CONNECTED) {
+                ESP_LOGI(TAG, "Connected to WiFi! IP: %s", WiFi.localIP().toString().c_str());
+            } else {
+                ESP_LOGW(TAG, "Failed to connect to WiFi after %d attempts.", MAX_ATTEMPTS);
+            }
         } else {
             ESP_LOGW(TAG, "No SSID configured for STA mode, skipping STA connection.");
         }
@@ -69,10 +78,11 @@ void Sys_WiFiManager::begin() {
 
 // 启动配网模式
 void Sys_WiFiManager::startProvisioningMode() {
-    const char* ap_ssid = "ESP32S3-Config";
+    const char* ap_ssid = "esp32s3"; // 与platformio.ini中的CONFIG_WIFI_PROV_SOFTAP_SSID一致
+    const char* ap_password = "12345678"; // 与platformio.ini中的CONFIG_WIFI_PROV_SOFTAP_PASSWORD一致
     ESP_LOGI(TAG, "Starting Provisioning Mode AP with SSID: %s", ap_ssid);
     WiFi.mode(WIFI_AP);
-    WiFi.softAP(ap_ssid, NULL); // 启动一个开放的配置网络
+    WiFi.softAP(ap_ssid, ap_password); // 启动一个带密码的配置网络
     ESP_LOGI(TAG, "Provisioning AP IP address: %s", WiFi.softAPIP().toString().c_str());
 }
 

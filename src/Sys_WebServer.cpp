@@ -87,12 +87,21 @@ void Sys_WebServer::onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *clie
                     cmd.command = CMD_GET_SYSTEM_STATUS;
                 } else if (strcmp(command, "scan_wifi_networks") == 0) {
                     cmd.command = CMD_SCAN_WIFI;
+                } else if (strcmp(command, "get_wifi_settings") == 0) {
+                    cmd.command = CMD_GET_WIFI_SETTINGS;
+                } else if (strcmp(command, "save_wifi_settings") == 0) {
+                    cmd.command = CMD_SAVE_WIFI_SETTINGS;
+                    // 将整个JSON payload复制到CommandMessage的payload字段
+                    // 确保payload不会溢出
+                    if (len < MAX_PAYLOAD_SIZE) {
+                        memcpy(cmd.payload, data, len);
+                        cmd.payload[len] = '\0'; // 确保字符串以null结尾
+                    } else {
+                        ESP_LOGE(TAG, "Received WiFi settings payload too large (%u bytes), max is %u.", len, MAX_PAYLOAD_SIZE);
+                        client->text("{\"error\":\"Payload too large\"}");
+                        command_valid = false;
+                    }
                 }
-                // TODO: Implement save_wifi_settings logic by passing data via queue
-                /* else if (strcmp(command, "save_wifi_settings") == 0) {
-                    cmd.command = CMD_SAVE_WIFI_CONFIG;
-                    // This part needs a more complex payload system in the queue
-                } */
                 else {
                     command_valid = false;
                     ESP_LOGW(TAG, "Unknown command received: %s", command);
@@ -152,7 +161,8 @@ void Sys_WebServer::begin() {
 
     // 启动服务器
     _server->begin();
-    ESP_LOGI(TAG, "Web Server with WebSocket started on IP: %s", WiFi.localIP().toString().c_str());
+    ESP_LOGI(TAG, "Web Server with WebSocket started.");
+    // IP地址的获取和显示将由Task_Worker在WiFi连接成功后推送
 }
 
 // 停止Web服务器
