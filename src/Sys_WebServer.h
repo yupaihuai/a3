@@ -32,6 +32,9 @@ public:
     // 停止Web服务器
     void end();
 
+    // 清理并关闭所有连接和服务器
+    void cleanup();
+
     // 获取WebSocket实例
     AsyncWebSocket* getWebSocket();
 };

@@ -14,7 +14,8 @@ typedef enum {
     CMD_SCAN_WIFI,
     CMD_GET_WIFI_SETTINGS,
     CMD_SAVE_WIFI_SETTINGS,
-    // 未来可以添加更多命令
+    CMD_REBOOT,
+    CMD_FACTORY_RESET
 } AppCommand;
 
 // 定义在命令队列中传递的消息结构

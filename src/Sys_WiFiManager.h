@@ -9,9 +9,15 @@ class Sys_WiFiManager {
 private:
     static Sys_WiFiManager* _instance;
     WiFiSettings _currentSettings;
+    unsigned long _reconnectTimer; // 用于非阻塞重连的计时器
+    wl_status_t _lastStatus;       // 用于检测连接状态变化
+    bool _reconnecting;            // 标志位，指示是否正在等待重新连接
 
     // 私有构造函数，实现单例模式
     Sys_WiFiManager();
+
+    // 应用当前设置并发起连接
+    void _applyAndConnect();
 
 public:
     // 禁止拷贝和赋值
@@ -21,8 +27,11 @@ public:
     // 获取单例实例
     static Sys_WiFiManager* getInstance();
 
-    // 初始化WiFi管理器，加载配置并连接
+    // 初始化WiFi管理器，加载配置并发起连接（非阻塞）
     void begin();
+
+    // 周期性更新函数，由后台任务调用，处理连接/重连逻辑
+    void update();
 
     // 启动配网模式 (强制开启一个AP)
     void startProvisioningMode();

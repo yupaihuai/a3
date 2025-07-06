@@ -40,6 +40,9 @@ public:
     // 检查WiFi是否已配置 (即，SSID是否已保存)
     bool isWiFiConfigured();
 
+    // 擦除WiFi设置
+    bool eraseWiFiSettings();
+
     // （未来扩展）保存其他设置...
     // bool saveMqttSettings(const MqttSettings& settings);
 };

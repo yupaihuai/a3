@@ -5,6 +5,7 @@
 #include <esp_log.h>
 #include <WiFi.h>
 #include <ESPAsyncWebServer.h> // 包含主头文件，确保所有依赖都已定义
+#include "Sys_WebServer.h"     // 引入Web服务器管理器以调用cleanup
 
 static const char* TAG = "Sys_Tasks";
 
@@ -122,6 +123,30 @@ void taskWorker(void *pvParameters) {
                     }
                     break;
                 }
+                case CMD_REBOOT: {
+                    ESP_LOGI(TAG, "Task_Worker: Received CMD_REBOOT");
+                    // 先发消息，再清理网络，最后重启
+                    _ws->textAll("{\"type\":\"toast\",\"data\":{\"message\":\"设备即将重启...\",\"level\":\"info\"}}");
+                    vTaskDelay(pdMS_TO_TICKS(100)); // 短暂延时确保消息发出
+                    Sys_WebServer::getInstance()->cleanup();
+                    vTaskDelay(pdMS_TO_TICKS(100)); // 短暂延时等待网络资源释放
+                    ESP.restart();
+                    break;
+                }
+                case CMD_FACTORY_RESET: {
+                    ESP_LOGW(TAG, "Task_Worker: Received CMD_FACTORY_RESET. Erasing NVS 'wifi-config' namespace...");
+                    bool success = settingsManager->eraseWiFiSettings();
+                    if (success) {
+                         _ws->textAll("{\"type\":\"toast\",\"data\":{\"message\":\"恢复出厂设置成功！设备即将重启...\",\"level\":\"success\"}}");
+                    } else {
+                         _ws->textAll("{\"type\":\"toast\",\"data\":{\"message\":\"恢复出厂设置失败！设备即将重启...\",\"level\":\"danger\"}}");
+                    }
+                    vTaskDelay(pdMS_TO_TICKS(100)); // 短暂延时确保消息发出
+                    Sys_WebServer::getInstance()->cleanup();
+                    vTaskDelay(pdMS_TO_TICKS(100)); // 短暂延时等待网络资源释放
+                    ESP.restart();
+                    break;
+                }
                 default:
                     ESP_LOGW(TAG, "Task_Worker: Received unknown command: %d", receivedCmd.command);
                     _ws->textAll("{\"type\":\"toast\",\"data\":{\"message\":\"未知命令！\",\"level\":\"warning\"}}");
@@ -148,13 +173,18 @@ void taskWebSocketPusher(void *pvParameters) {
     }
 }
 
-// 系统状态监控任务 (Task_SystemMonitor) - 现在仅作为占位符，实际采集由Task_Worker按需完成
+// 系统状态监控任务 (Task_SystemMonitor)
 void taskSystemMonitor(void *pvParameters) {
-    ESP_LOGI(TAG, "Task_SystemMonitor started on core %d (Idle, on-demand data collection handled by Task_Worker)", xPortGetCoreID());
+    ESP_LOGI(TAG, "Task_SystemMonitor started on core %d", xPortGetCoreID());
     for (;;) {
-        // 此任务现在主要用于保持活跃，不进行周期性数据采集
-        // 实际的系统状态采集已移至Task_Worker的CMD_GET_SYSTEM_STATUS处理中
-        vTaskDelay(pdMS_TO_TICKS(1000)); // 保持任务活跃，避免WDT超时
+        // 周期性调用WiFi管理器的update函数，处理连接和重连逻辑
+        Sys_WiFiManager::getInstance()->update();
+
+        // 其他周期性监控任务可以放在这里
+        // ...
+
+        // 任务延迟，控制执行频率
+        vTaskDelay(pdMS_TO_TICKS(500)); // 每500ms检查一次
     }
 }
 

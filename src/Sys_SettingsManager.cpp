@@ -68,3 +68,9 @@ bool Sys_SettingsManager::isWiFiConfigured() {
     // 逻辑很简单：如果NVS中存在一个非空的SSID，就认为已经配置过了
     return _preferences.getString("ssid", "").length() > 0;
 }
+
+// 擦除WiFi设置
+bool Sys_SettingsManager::eraseWiFiSettings() {
+    ESP_LOGW(TAG, "Erasing all keys in 'wifi-config' namespace...");
+    return _preferences.clear();
+}

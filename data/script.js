@@ -17,10 +17,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const sysFlashSize = document.getElementById('sys-flash-size');
     const sysPsramSize = document.getElementById('sys-psram-size');
     const sysIdfVersion = document.getElementById('sys-idf-version');
-    const rebootBtn = document.getElementById('reboot-btn');
-    const factoryResetBtn = document.getElementById('factory-reset-btn');
     const logConsole = document.getElementById('log-console');
     const connectionStatusBadge = document.getElementById('connection-status');
+
+    // 确认模态框元素
+    const confirmationModalEl = document.getElementById('confirmationModal');
+    const confirmationModal = new bootstrap.Modal(confirmationModalEl);
+    const confirmationModalBody = document.getElementById('confirmationModalBody');
+    const confirmActionBtn = document.getElementById('confirm-action-btn');
+    let currentAction = null; // 用于存储当前待确认的操作
 
 
     // WiFi设置页面元素
@@ -56,9 +61,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 sendCommand({ command: 'get_system_status' });
             }
 
-            // --- 新增：在移动端视图下，点击链接后自动收起菜单 ---
-            const offcanvasSidebar = bootstrap.Offcanvas.getInstance(document.getElementById('offcanvasSidebar'));
-            if (offcanvasSidebar) {
+            // 在移动端视图下，点击链接后自动收起菜单
+            const offcanvasElement = document.getElementById('offcanvasSidebar');
+            const offcanvasSidebar = bootstrap.Offcanvas.getInstance(offcanvasElement);
+            if (offcanvasSidebar && offcanvasElement.classList.contains('show')) {
                 offcanvasSidebar.hide();
             }
         });
@@ -249,19 +255,33 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    if (rebootBtn) {
-        rebootBtn.addEventListener('click', () => {
-            if (confirm('确定要重启设备吗？')) {
-                sendCommand({ command: 'reboot' });
+    // --- 模态框确认逻辑 ---
+    if (confirmationModalEl) {
+        confirmationModalEl.addEventListener('show.bs.modal', (event) => {
+            const button = event.relatedTarget;
+            currentAction = button.getAttribute('data-action');
+            
+            const confirmBtn = document.getElementById('confirm-action-btn');
+            confirmBtn.className = 'btn'; // Reset classes
+
+            if (currentAction === 'reboot') {
+                confirmationModalBody.textContent = '您确定要立即重启设备吗？';
+                confirmBtn.classList.add('btn-danger');
+            } else if (currentAction === 'factory_reset') {
+                confirmationModalBody.textContent = '警告：您确定要恢复出厂设置吗？所有已保存的配置都将被擦除！';
+                confirmBtn.classList.add('btn-warning');
             }
+             confirmBtn.textContent = '确认';
         });
     }
 
-    if (factoryResetBtn) {
-        factoryResetBtn.addEventListener('click', () => {
-            if (confirm('确定要恢复出厂设置吗？这将擦除所有配置！')) {
-                sendCommand({ command: 'factory_reset' });
+    if (confirmActionBtn) {
+        confirmActionBtn.addEventListener('click', () => {
+            if (currentAction) {
+                sendCommand({ command: currentAction });
+                currentAction = null; // Reset action
             }
+            confirmationModal.hide();
         });
     }
 

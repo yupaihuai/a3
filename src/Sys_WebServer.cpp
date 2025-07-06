@@ -101,6 +101,10 @@ void Sys_WebServer::onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *clie
                         client->text("{\"error\":\"Payload too large\"}");
                         command_valid = false;
                     }
+                } else if (strcmp(command, "reboot") == 0) {
+                    cmd.command = CMD_REBOOT;
+                } else if (strcmp(command, "factory_reset") == 0) {
+                    cmd.command = CMD_FACTORY_RESET;
                 }
                 else {
                     command_valid = false;
@@ -175,4 +179,15 @@ void Sys_WebServer::end() {
 
 AsyncWebSocket* Sys_WebServer::getWebSocket() {
     return _ws;
+}
+
+// 清理并关闭所有连接和服务器
+void Sys_WebServer::cleanup() {
+    ESP_LOGI(TAG, "Cleaning up WebServer and WebSocket...");
+    if (_ws) {
+        _ws->closeAll(); // 优雅地关闭所有WebSocket连接
+    }
+    if (_server) {
+        _server->end(); // 停止Web服务器
+    }
 }

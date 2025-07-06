@@ -142,10 +142,10 @@
                             <div class="card">
                                 <div class="card-header">全局操作</div>
                                 <div class="card-body d-grid gap-2">
-                                    <button class="btn btn-danger btn-lg" id="reboot-btn">
+                                    <button class="btn btn-danger btn-lg" data-bs-toggle="modal" data-bs-target="#confirmationModal" data-action="reboot">
                                         <i class="bi bi-arrow-clockwise"></i> 重启设备
                                     </button>
-                                    <button class="btn btn-warning btn-lg" id="factory-reset-btn">
+                                    <button class="btn btn-warning btn-lg" data-bs-toggle="modal" data-bs-target="#confirmationModal" data-action="factory_reset">
                                         <i class="bi bi-exclamation-triangle"></i> 恢复出厂设置
                                     </button>
                                 </div>
@@ -255,6 +255,25 @@
                             <!-- 扫描结果将动态插入这里 -->
                         </tbody>
                     </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 通用确认操作模态框 -->
+    <div class="modal fade" id="confirmationModal" tabindex="-1" aria-labelledby="confirmationModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="confirmationModalLabel">请确认操作</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="confirmationModalBody">
+                    你确定要执行此操作吗？
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" id="confirm-action-btn">确认</button>
                 </div>
             </div>
         </div>
