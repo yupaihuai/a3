@@ -372,9 +372,10 @@ Task_Worker从NVS中读取WIFI、蓝牙、摄像头等所有配置，将所有�
 ### WIFI管理模块
 
 #### WIFI配网： 
-(使用 Unified Provisioning 的 SOFTAP配网)
+(基于网页的配网管理)
 
-##### 使用 wifi_prov_mgr_start_provisioning() 函数根据platformIo.ini内配网配置
+##### 使用 逻辑流程：
+设备启动-检查NVS-连接成功-启动主Web服务，连接失败则进入“配置模式”；如果未配置：直接进入“配置模式”。
 
 #### WIFI设置 (WIFI Settings)
 用户界面与实现： 用户可以通过Web界面无缝地配置ESP32的Wi-Fi连接，配置能被持久化保存。

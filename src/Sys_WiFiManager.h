@@ -33,7 +33,7 @@ public:
     // 周期性更新函数，由后台任务调用，处理连接/重连逻辑
     void update();
 
-    // 启动配网模式 (强制开启一个AP)
+    // 启动AP配网模式
     void startProvisioningMode();
 
     // 扫描可用WiFi网络

@@ -30,6 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // WiFi设置页面元素
     const wifiForm = document.getElementById('wifi-form');
+    const wifiModeSelect = document.getElementById('wifi-mode-select');
     const scanWifiBtn = document.getElementById('scan-wifi-btn');
     const wifiScanResultsBody = document.getElementById('wifi-scan-results');
     const wifiSsidInput = document.getElementById('wifi-ssid');
@@ -178,11 +179,10 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateWifiForm(data) {
         wifiSsidInput.value = data.ssid || '';
         wifiPasswordInput.value = data.password || ''; // 密码也回显，但实际应用中不建议回显明文密码
-        const modeRadio = document.querySelector(`input[name="wifi-mode"][value="${data.mode}"]`);
-        if (modeRadio) {
-            modeRadio.checked = true;
+        if (wifiModeSelect) {
+            wifiModeSelect.value = data.mode || 3; // 默认为AP+STA
             // 触发change事件以更新UI显示
-            modeRadio.dispatchEvent(new Event('change'));
+            wifiModeSelect.dispatchEvent(new Event('change'));
         }
 
         // 更新静态IP设置
@@ -286,9 +286,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // 初始加载时，根据默认选中的WiFi模式显示/隐藏字段
-    const initialModeRadio = document.querySelector('input[name="wifi-mode"]:checked');
-    if (initialModeRadio) {
-        initialModeRadio.dispatchEvent(new Event('change'));
+    if (wifiModeSelect) {
+        wifiModeSelect.dispatchEvent(new Event('change'));
     }
 
     // 初始加载时，根据静态IP开关状态显示/隐藏字段
@@ -303,19 +302,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (wifiForm) {
         // 监听WiFi模式切换
-        document.querySelectorAll('input[name="wifi-mode"]').forEach(radio => {
-            radio.addEventListener('change', (e) => {
+        if (wifiModeSelect) {
+            wifiModeSelect.addEventListener('change', (e) => {
                 const selectedMode = parseInt(e.target.value);
-                // 根据模式显示或隐藏相关字段
                 const staFields = document.getElementById('sta-fields');
                 const apFields = document.getElementById('ap-fields');
-                const scanBtn = document.getElementById('scan-wifi-btn');
+                const staticIpContainer = document.getElementById('static-ip-container');
 
-                if (staFields) staFields.style.display = (selectedMode === 1 || selectedMode === 3) ? 'block' : 'none';
-                if (apFields) apFields.style.display = (selectedMode === 2 || selectedMode === 3) ? 'block' : 'none';
-                if (scanBtn) scanBtn.style.display = (selectedMode === 1 || selectedMode === 3) ? 'inline-block' : 'none';
+                // 根据模式显示或隐藏相关字段
+                if (selectedMode === 1) { // STA only
+                    if (staFields) staFields.style.display = 'block';
+                    if (apFields) apFields.style.display = 'none';
+                    if (staticIpContainer) staticIpContainer.style.display = 'block';
+                } else if (selectedMode === 2) { // AP only
+                    if (staFields) staFields.style.display = 'none';
+                    if (apFields) apFields.style.display = 'block';
+                    if (staticIpContainer) staticIpContainer.style.display = 'none';
+                } else if (selectedMode === 3) { // AP+STA
+                    if (staFields) staFields.style.display = 'block';
+                    if (apFields) apFields.style.display = 'block';
+                    if (staticIpContainer) staticIpContainer.style.display = 'block';
+                }
             });
-        });
+        }
 
         // 监听静态IP开关
         const staticIpToggle = document.getElementById('static-ip-toggle');
@@ -330,7 +339,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const settings = {
                 ssid: document.getElementById('wifi-ssid').value,
                 password: document.getElementById('wifi-password').value,
-                mode: parseInt(document.querySelector('input[name="wifi-mode"]:checked').value),
+                ap_ssid: document.getElementById('ap-ssid').value,
+                ap_password: document.getElementById('ap-password').value,
+                mode: parseInt(wifiModeSelect.value),
                 static_ip: document.getElementById('static-ip-toggle').checked,
                 ip: document.getElementById('static-ip-address').value,
                 subnet: document.getElementById('static-ip-subnet').value,

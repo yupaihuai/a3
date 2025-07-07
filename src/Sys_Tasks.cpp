@@ -81,6 +81,8 @@ void taskWorker(void *pvParameters) {
                     JsonObject data = doc["data"].to<JsonObject>();
                     data["ssid"] = currentSettings.ssid;
                     data["password"] = currentSettings.password;
+                    data["ap_ssid"] = currentSettings.ap_ssid;
+                    data["ap_password"] = currentSettings.ap_password;
                     data["mode"] = currentSettings.mode;
                     data["static_ip"] = currentSettings.staticIP;
                     data["ip"] = currentSettings.ip;
@@ -102,10 +104,12 @@ void taskWorker(void *pvParameters) {
                         break;
                     }
                     WiFiSettings newSettings;
-                    newSettings.ssid = doc["ssid"].as<String>();
-                    newSettings.password = doc["password"].as<String>();
-                    newSettings.mode = doc["mode"].as<int>();
-                    newSettings.staticIP = doc["static_ip"] | false; // 默认false
+                    newSettings.ssid = doc["data"]["ssid"].as<String>();
+                    newSettings.password = doc["data"]["password"].as<String>();
+                    newSettings.ap_ssid = doc["data"]["ap_ssid"].as<String>();
+                    newSettings.ap_password = doc["data"]["ap_password"].as<String>();
+                    newSettings.mode = doc["data"]["mode"].as<int>();
+                    newSettings.staticIP = doc["data"]["static_ip"] | false; // 默认false
                     newSettings.ip = doc["ip"] | "";
                     newSettings.subnet = doc["subnet"] | "";
                     newSettings.gateway = doc["gateway"] | "";

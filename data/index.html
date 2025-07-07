@@ -72,7 +72,15 @@
             <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
                 <!-- 仪表盘页面 -->
                 <div id="page-dashboard" class="page-content">
-                    <h1 class="mt-4">ESP32S3 实时仪表盘</h1>
+                    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                        <h1 class="h2">ESP32S3 实时仪表盘</h1>
+                        <div class="btn-toolbar mb-2 mb-md-0">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="refresh-dashboard-btn">
+                                <i class="bi bi-arrow-repeat"></i>
+                                手动刷新
+                            </button>
+                        </div>
+                    </div>
                     <p>设备核心状态概览。</p>
 
                     <!-- 关键指标卡片 -->
@@ -171,41 +179,44 @@
                         <div class="card-body">
                             <form id="wifi-form">
                                 <div class="mb-3">
-                                    <label class="form-label">WiFi 模式</label>
-                                    <div>
-                                        <div class="form-check form-check-inline">
-                                            <input class="form-check-input" type="radio" name="wifi-mode" id="wifi-mode-sta" value="1">
-                                            <label class="form-check-label" for="wifi-mode-sta">客户端 (STA)</label>
+                                    <label for="wifi-mode-select" class="form-label">WiFi 模式</label>
+                                    <select class="form-select" id="wifi-mode-select">
+                                        <option value="2">接入点 (AP)</option>
+                                        <option value="1">客户端 (STA)</option>
+                                        <option value="3" selected>混合模式 (AP+STA)</option>
+                                    </select>
+                                </div>
+                                <div id="sta-fields">
+                                    <div class="mb-3">
+                                        <label for="wifi-ssid" class="form-label">网络名称 (SSID)</label>
+                                        <div class="input-group">
+                                            <input type="text" class="form-control" id="wifi-ssid" placeholder="输入WiFi名称">
+                                            <button class="btn btn-outline-secondary" type="button" id="scan-wifi-btn" data-bs-toggle="modal" data-bs-target="#wifi-scan-modal">扫描</button>
                                         </div>
-                                        <div class="form-check form-check-inline">
-                                            <input class="form-check-input" type="radio" name="wifi-mode" id="wifi-mode-ap" value="2">
-                                            <label class="form-check-label" for="wifi-mode-ap">接入点 (AP)</label>
-                                        </div>
-                                        <div class="form-check form-check-inline">
-                                            <input class="form-check-input" type="radio" name="wifi-mode" id="wifi-mode-apsta" value="3" checked>
-                                            <label class="form-check-label" for="wifi-mode-apsta">混合模式 (AP+STA)</label>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="wifi-password" class="form-label">密码</label>
+                                        <div class="input-group">
+                                            <input type="password" class="form-control" id="wifi-password" placeholder="输入WiFi密码">
+                                            <button class="btn btn-outline-secondary" type="button" id="toggle-password-visibility">
+                                                <i class="bi bi-eye-slash" id="password-toggle-icon"></i>
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
-                                <div class="mb-3">
-                                    <label for="wifi-ssid" class="form-label">网络名称 (SSID)</label>
-                                    <div class="input-group">
-                                        <input type="text" class="form-control" id="wifi-ssid" placeholder="输入WiFi名称">
-                                        <button class="btn btn-outline-secondary" type="button" id="scan-wifi-btn" data-bs-toggle="modal" data-bs-target="#wifi-scan-modal">扫描</button>
+                                <div id="ap-fields" style="display: none;">
+                                    <div class="mb-3">
+                                        <label for="ap-ssid" class="form-label">AP模式名称 (SSID)</label>
+                                        <input type="text" class="form-control" id="ap-ssid" placeholder="设置AP热点名称">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="ap-password" class="form-label">AP模式密码</label>
+                                        <input type="password" class="form-control" id="ap-password" placeholder="设置AP热点密码（至少8位）">
                                     </div>
                                 </div>
-                                <div class="mb-3">
-                                    <label for="wifi-password" class="form-label">密码</label>
-                                    <div class="input-group">
-                                        <input type="password" class="form-control" id="wifi-password" placeholder="输入WiFi密码">
-                                        <button class="btn btn-outline-secondary" type="button" id="toggle-password-visibility">
-                                            <i class="bi bi-eye-slash" id="password-toggle-icon"></i>
-                                        </button>
-                                    </div>
-                                  </div>
   
                                   <!-- 静态IP设置 (可折叠) -->
-                                  <div class="mb-3 form-check form-switch">
+                                  <div id="static-ip-container" class="mb-3 form-check form-switch">
                                       <input class="form-check-input" type="checkbox" id="static-ip-toggle">
                                       <label class="form-check-label" for="static-ip-toggle">启用静态IP</label>
                                   </div>

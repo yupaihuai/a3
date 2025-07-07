@@ -21,19 +21,27 @@ Sys_WiFiManager* Sys_WiFiManager::getInstance() {
 
 // 初始化WiFi管理器
 void Sys_WiFiManager::begin() {
-    ESP_LOGI(TAG, "Initializing WiFi Manager (non-blocking)...");
+    ESP_LOGI(TAG, "Initializing WiFi Manager...");
     _currentSettings = Sys_SettingsManager::getInstance()->loadWiFiSettings();
-    _applyAndConnect();
+
+    if (_currentSettings.ssid.length() > 0) {
+        ESP_LOGI(TAG, "Found existing WiFi configuration.");
+        _applyAndConnect();
+    } else {
+        ESP_LOGW(TAG, "No WiFi configuration found. Starting AP provisioning mode.");
+        startProvisioningMode();
+    }
 }
 
-// 启动配网模式
+// 启动AP配网模式
 void Sys_WiFiManager::startProvisioningMode() {
-    const char* ap_ssid = "esp32s3"; // 与platformio.ini中的CONFIG_WIFI_PROV_SOFTAP_SSID一致
-    const char* ap_password = "12345678"; // 与platformio.ini中的CONFIG_WIFI_PROV_SOFTAP_PASSWORD一致
-    ESP_LOGI(TAG, "Starting Provisioning Mode AP with SSID: %s", ap_ssid);
+    // 启动一个固定的AP，以便用户连接并访问Web UI进行配网
     WiFi.mode(WIFI_AP);
-    WiFi.softAP(ap_ssid, ap_password); // 启动一个带密码的配置网络
-    ESP_LOGI(TAG, "Provisioning AP IP address: %s", WiFi.softAPIP().toString().c_str());
+    const char* ap_ssid = "ESP32S3-Config";
+    const char* ap_password = "12345678";
+    ESP_LOGI(TAG, "Starting Access Point for provisioning with SSID: %s", ap_ssid);
+    WiFi.softAP(ap_ssid, ap_password);
+    ESP_LOGI(TAG, "AP IP address: %s", WiFi.softAPIP().toString().c_str());
 }
 
 // 扫描可用WiFi网络
@@ -145,6 +153,8 @@ void Sys_WiFiManager::_applyAndConnect() {
     // 如果没有有效的SSID配置，则不执行任何操作
     if (_currentSettings.ssid.length() == 0) {
         ESP_LOGW(TAG, "No WiFi configuration found. Aborting connection attempt.");
+        // 如果没有配置，应该进入配网模式，而不是直接返回
+        startProvisioningMode();
         return;
     }
 
@@ -152,11 +162,12 @@ void Sys_WiFiManager::_applyAndConnect() {
     WiFi.mode((wifi_mode_t)_currentSettings.mode);
 
     if (_currentSettings.mode == WIFI_AP || _currentSettings.mode == WIFI_AP_STA) {
-        const char* ap_ssid = "ESP32S3-Config";
-        const char* ap_password = "12345678";
-        ESP_LOGI(TAG, "Starting Access Point with fixed SSID: %s", ap_ssid);
-        WiFi.softAP(ap_ssid, ap_password);
+        ESP_LOGI(TAG, "Starting Access Point with SSID: %s", _currentSettings.ap_ssid.c_str());
+        WiFi.softAP(_currentSettings.ap_ssid.c_str(), _currentSettings.ap_password.c_str());
         ESP_LOGI(TAG, "AP IP address: %s", WiFi.softAPIP().toString().c_str());
+    } else {
+        // 如果新模式不是AP或AP+STA，则确保AP是关闭的
+        WiFi.softAPdisconnect(true);
     }
 
     if (_currentSettings.mode == WIFI_STA || _currentSettings.mode == WIFI_AP_STA) {
@@ -180,5 +191,8 @@ void Sys_WiFiManager::_applyAndConnect() {
         } else {
             ESP_LOGW(TAG, "No SSID configured for STA mode, skipping STA connection.");
         }
+    } else {
+        // 如果新模式不是STA或AP+STA，则确保STA是断开的
+        WiFi.disconnect(true);
     }
 }

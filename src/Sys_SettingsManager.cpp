@@ -31,6 +31,8 @@ bool Sys_SettingsManager::saveWiFiSettings(const WiFiSettings& settings) {
     ESP_LOGI(TAG, "Saving WiFi settings to NVS...");
     _preferences.putString("ssid", settings.ssid);
     _preferences.putString("password", settings.password);
+    _preferences.putString("ap_ssid", settings.ap_ssid);
+    _preferences.putString("ap_password", settings.ap_password);
     _preferences.putInt("mode", settings.mode);
     _preferences.putBool("static_ip", settings.staticIP);
     _preferences.putString("ip", settings.ip);
@@ -49,6 +51,8 @@ WiFiSettings Sys_SettingsManager::loadWiFiSettings() {
     // 当键不存在时，返回一个空字符串 ""
     settings.ssid = _preferences.getString("ssid", "");
     settings.password = _preferences.getString("password", "");
+    settings.ap_ssid = _preferences.getString("ap_ssid", "ESP32S3-Config"); // 默认AP SSID
+    settings.ap_password = _preferences.getString("ap_password", "12345678"); // 默认AP密码
     settings.mode = _preferences.getInt("mode", 3); // 默认为 AP+STA 模式
     settings.staticIP = _preferences.getBool("static_ip", false);
     settings.ip = _preferences.getString("ip", "");

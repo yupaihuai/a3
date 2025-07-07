@@ -8,6 +8,8 @@
 struct WiFiSettings {
     String ssid;
     String password;
+    String ap_ssid;      // 新增：AP模式的SSID
+    String ap_password;  // 新增：AP模式的密码
     int mode; // 1=STA, 2=AP, 3=AP_STA
     bool staticIP;
     String ip;
